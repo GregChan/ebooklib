@@ -258,7 +258,8 @@ class EpubHtml(EpubItem):
 
         self.links = []
         self.properties = []
-        self.pages = []
+        self.pages = []        
+        self.metadata = {}
 
     def is_chapter(self):
         """
@@ -338,6 +339,22 @@ class EpubHtml(EpubItem):
         if item.get_type() == ebooklib.ITEM_SCRIPT:
             self.add_link(src=item.get_name(), type='text/javascript')
 
+    def add_metadata(self, namespace, name, value, others=None):
+        """
+        Add metadata to this docuemnt. It will create meta tags accordingly.
+        """
+
+        if namespace in NAMESPACES:
+            namespace = NAMESPACES[namespace]
+
+        if namespace not in self.metadata:
+            self.metadata[namespace] = {}
+
+        if name not in self.metadata[namespace]:
+            self.metadata[namespace][name] = []
+
+        self.metadata[namespace][name].append((value, others))
+
     def get_body_content(self):
         """
         Returns content of BODY element for this HTML document. Content will be of type 'str' (Python 2)
@@ -412,6 +429,19 @@ class EpubHtml(EpubItem):
                 _lnk.text = ''
             else:
                 _lnk = etree.SubElement(_head, 'link', lnk)
+
+        for ns_name, values in six.iteritems(self.metadata):
+            for name, values in six.iteritems(values):
+                for v in values:
+                    try:
+                        if ns_name:
+                            el = etree.SubElement(_head, '{%s}%s' % (ns_name, name), v[1])
+                        else:
+                            el = etree.SubElement(_head, '%s' % name, v[1])
+
+                        el.text = v[0]
+                    except ValueError:
+                        logging.error('Could not create metadata "{}".'.format(name))
 
         # this should not be like this
         # head = html_root.find('head')
