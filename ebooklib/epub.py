@@ -258,7 +258,7 @@ class EpubHtml(EpubItem):
 
         self.links = []
         self.properties = []
-        self.pages = []        
+        self.pages = []
         self.metadata = {}
 
     def is_chapter(self):
@@ -1161,6 +1161,19 @@ class EpubWriter(object):
                 'href': _link.get('href', ''), 'rel': 'stylesheet', 'type': 'text/css'
             })
 
+        for ns_name, values in six.iteritems(item.metadata):
+            for name, values in six.iteritems(values):
+                for v in values:
+                    try:
+                        if ns_name:
+                            el = etree.SubElement(head, '{%s}%s' % (ns_name, name), v[1])
+                        else:
+                            el = etree.SubElement(head, '%s' % name, v[1])
+
+                        el.text = v[0]
+                    except ValueError:
+                        logging.error('Could not create metadata "{}".'.format(name))
+
         body = etree.SubElement(root, 'body')
         nav = etree.SubElement(body, 'nav', {
             '{%s}type' % NAMESPACES['EPUB']: 'toc',
@@ -1238,8 +1251,8 @@ class EpubWriter(object):
 
         # PAGE-LIST
         if self.options.get('epub3_pages'):
-            inserted_pages = get_pages_for_items([item for item in self.book.get_items_of_type(ebooklib.ITEM_DOCUMENT) \
-                if not isinstance(item, EpubNav)])
+            inserted_pages = get_pages_for_items([item for item in self.book.get_items_of_type(ebooklib.ITEM_DOCUMENT)
+                                                  if not isinstance(item, EpubNav)])
 
             if len(inserted_pages) > 0:
                 pagelist_nav = etree.SubElement(
@@ -1257,8 +1270,6 @@ class EpubWriter(object):
                 )
 
                 pages_ol = etree.SubElement(pagelist_nav, 'ol')
-
-
 
                 for filename, pageref, label in inserted_pages:
                     li_item = etree.SubElement(pages_ol, 'li')
